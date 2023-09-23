@@ -1,0 +1,5 @@
+pytest
+beautifulsoup4
+pylint
+requests
+openai
