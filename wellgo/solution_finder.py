@@ -4,6 +4,7 @@ import openai
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+import subprocess
 
 load_dotenv()
 
@@ -14,6 +15,8 @@ SIGN_IN_URL = os.getenv("SIGN_IN_URL")
 QUIZ_URL = os.getenv("QUIZ_URL")
 POST_ANSWER_URL = os.getenv("POST_ANSWER_URL")
 openai.api_key = os.getenv("OPENAI_API_KEY")
+TOKEN = os.getenv("TOKEN")
+HOME_IP = os.getenv("HOME_IP")
 
 
 def submit_quiz(session, selected_answer: str, response: requests.Response):
@@ -66,13 +69,9 @@ def obtain_question(response):
 def get_prompt(question, answers):
     """Return the prompt for the question and answers"""
     return f"""
-    # Available answers 
+    {question} Give Response  as a single letter from options that answers this qu.
+    # Options 
     {answers}
-    
-    # Question to answer
-    {question}
-    
-    Respond with the letter from the multiple choice answer that solves the question. Give your response as a captilized letter in english only of length=1.  
     """
 
 
@@ -88,6 +87,22 @@ def determine_answer(qu, answers):
     if answer not in ["A", "B", "C", "D"]:
         raise Exception("Wrong Choice! Investigate ChatGPT response...")
     return answer
+
+
+def check_answer(session):
+    """Check if the answer was correct by querying the website"""
+    response = session.get(QUIZ_URL)
+    soup = BeautifulSoup(response.text, "html.parser")
+    try:
+        status = soup.find("h1", {"style": "color: #70c78b"}, text=True).get_text(
+            strip=True
+        )
+    except Exception as e:
+        print(e)
+        return False
+    if status == "Correct!":
+        return True
+    return False
 
 
 def sign_in():
@@ -114,7 +129,28 @@ def sign_in():
     selected_answer = determine_answer(qu, answers)
     print(f"Chosen Answer={selected_answer}")
     submit_quiz(session, selected_answer, response)
-    print("Answer submitted!")
+    if check_answer(session):
+        print("Answer Correct!")
+        cmd = f'curl "http://{HOME_IP}:8991/message?token={TOKEN}" -F "title=[SU!] QUIZMASTER" -F "message"="Answer submitted sucessfully & is CORRECT." -F "priority=5"'
+        subprocess.run(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+        )
+    else:
+        print("Answer Wrong!")
+        cmd = f'curl "http://{HOME_IP}:8991/message?token={TOKEN}" -F "title= [FA] QUIZMASTER" -F "message"="Submission is INCORRECT." -F "priority=5"'
+        subprocess.run(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+        )
 
 
 if __name__ == "__main__":

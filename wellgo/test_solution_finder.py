@@ -1,5 +1,5 @@
 import pytest
-from solution_finder import obtain_question, submit_quiz
+from solution_finder import obtain_question, submit_quiz, check_answer
 from unittest.mock import Mock
 
 
@@ -37,3 +37,18 @@ def test_submit_quiz():
     session.post.assert_called_once_with(
         "https://wellgo.jp/en/quiz_answers", data=expected_data
     )
+
+
+def test_check_answer():
+    # Create a mock session object
+    session = Mock()
+
+    # Create a mock response object with a correct answer
+    response = Mock()
+    response.text = '<html><body><h1 class="mb-1 h1-noti" style="color: #70c78b">Correct!</h1></body></html>'
+
+    # Call the function with the mock session and response
+    result = check_answer(session, response)
+
+    # Check that the result is True
+    assert result == True
