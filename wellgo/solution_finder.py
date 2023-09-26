@@ -1,7 +1,8 @@
+import os
+
+import openai
 import requests
 from bs4 import BeautifulSoup
-import openai
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,7 +13,7 @@ SIGN_IN_URL = os.getenv("SIGN_IN_URL")
 
 QUIZ_URL = os.getenv("QUIZ_URL")
 POST_ANSWER_URL = os.getenv("POST_ANSWER_URL")
-API_KEY = os.getenv("API_KEY")
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 def submit_quiz(session, selected_answer: str, response: requests.Response):
@@ -30,7 +31,7 @@ def submit_quiz(session, selected_answer: str, response: requests.Response):
     }
 
     response = session.post(POST_ANSWER_URL, data=quiz_data)
-    # print(response.status_code)
+    print(response.status_code)
 
 
 def obtain_question(response):
@@ -45,22 +46,33 @@ def obtain_question(response):
     if question == "No quiz today.":
         print("No quiz today")
         return None, None
-    # TODO get answers from the response
-    answers = ["A", "B", "C", "D"]
+    # Find the table with id "quiz_question_table"
+    table = soup.find("table", {"id": "quiz_question_table"})
+
+    # Find all row elements within the table
+    rows = table.find_all("tr")
+    answers = []
+    choices = ["A", "B", "C", "D"]
+    # Iterate through the rows and print their contents
+    for i, row in enumerate(rows):
+        # print(row.prettify())
+        div_element = row.find("div")
+        if div_element:
+            answers.append(choices[i] + ". " + div_element.get_text(strip=True))
+    print(answers)
     return question, answers
 
 
 def get_prompt(question, answers):
     """Return the prompt for the question and answers"""
-    return """
+    return f"""
     # Available answers 
     {answers}
     
     # Question to answer
     {question}
     
-    # Respond with the letter from the multiple choice answer that solves the question
-    
+    Respond with the letter from the multiple choice answer that solves the question. Give your response as a captilized letter in english only of length=1.  
     """
 
 
@@ -69,7 +81,13 @@ def determine_answer(qu, answers):
     response = openai.Completion.create(
         model="gpt-3.5-turbo-instruct", prompt=get_prompt(qu, answers), temperature=1.0
     )
-    return response
+    print(response)
+    answer = response.choices[0].text
+    answer = answer.strip("\n")[0]
+    print(answer)
+    if answer not in ["A", "B", "C", "D"]:
+        raise Exception("Wrong Choice! Investigate ChatGPT response...")
+    return answer
 
 
 def sign_in():
@@ -90,19 +108,13 @@ def sign_in():
 
     response = session.post(SIGN_IN_URL, data=login_data)
     response = session.get(QUIZ_URL)
-    qu, anwers = obtain_question(response)
-    # selected_answer = determine_answer(qu, anwers)
-
-    # submit_quiz(session, selected_answer, response)
-
-    # print(response.text)
-    # soup = BeautifulSoup(response.content, "html.parser")
-    # print(soup.prettify())
-    # Check if the login was successful (by examining the response content or status code)
-    # if "Welcome" in response.text:
-    #     print("Login Successful")
-    # else:
-    #     print("Login Failed")
+    qu, answers = obtain_question(response)
+    prompt = get_prompt(qu, answers)
+    print(prompt)
+    selected_answer = determine_answer(qu, answers)
+    print(f"Chosen Answer={selected_answer}")
+    submit_quiz(session, selected_answer, response)
+    print("Answer submitted!")
 
 
 if __name__ == "__main__":
