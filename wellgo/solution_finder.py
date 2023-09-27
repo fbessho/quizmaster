@@ -1,10 +1,11 @@
+import logging
 import os
+import subprocess
 
 import openai
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-import subprocess
 
 load_dotenv()
 
@@ -18,6 +19,14 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 TOKEN = os.getenv("TOKEN")
 HOME_IP = os.getenv("HOME_IP")
 
+log_file = os.getenv("LOG_LOCATION")
+logging.basicConfig(
+    filename=log_file,
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
 
 def submit_quiz(session, selected_answer: str, response: requests.Response):
     """Given a selected_answer submit to the session the answer, obtaining the authenticity_token from the response"""
@@ -26,7 +35,7 @@ def submit_quiz(session, selected_answer: str, response: requests.Response):
     authenticity_token = soup.find("input", {"name": "authenticity_token"})
     authenticity_token = authenticity_token["value"]
 
-    print(authenticity_token)
+    logger.info(authenticity_token)
 
     quiz_data = {
         "authenticity_token": authenticity_token,
@@ -34,20 +43,20 @@ def submit_quiz(session, selected_answer: str, response: requests.Response):
     }
 
     response = session.post(POST_ANSWER_URL, data=quiz_data)
-    print(response.status_code)
+    logger.info(response.status_code)
 
 
 def obtain_question(response):
     soup = BeautifulSoup(response.text, "html.parser")
-    print(soup.prettify())
+    logger.info(soup.prettify())
     # Find the element with the id "Question"
     question_element = soup.find(id="Question")
 
     # Extract the text from the "Question" element
     question = question_element.get_text(strip=True)
-    print(question)
+    logger.info(question)
     if question == "No quiz today.":
-        print("No quiz today")
+        logger.info("No quiz today")
         return None, None
     # Find the table with id "quiz_question_table"
     table = soup.find("table", {"id": "quiz_question_table"})
@@ -56,13 +65,13 @@ def obtain_question(response):
     rows = table.find_all("tr")
     answers = []
     choices = ["A", "B", "C", "D"]
-    # Iterate through the rows and print their contents
+    # Iterate through the rows and logger.info their contents
     for i, row in enumerate(rows):
-        # print(row.prettify())
+        # logger.info(row.prettify())
         div_element = row.find("div")
         if div_element:
             answers.append(choices[i] + ". " + div_element.get_text(strip=True))
-    print(answers)
+    logger.info(answers)
     return question, answers
 
 
@@ -80,10 +89,10 @@ def determine_answer(qu, answers):
     response = openai.Completion.create(
         model="gpt-3.5-turbo-instruct", prompt=get_prompt(qu, answers), temperature=1.0
     )
-    print(response)
+    logger.info(response)
     answer = response.choices[0].text
     answer = answer.strip("\n")[0]
-    print(answer)
+    logger.info(answer)
     if answer not in ["A", "B", "C", "D"]:
         raise Exception("Wrong Choice! Investigate ChatGPT response...")
     return answer
@@ -98,7 +107,7 @@ def check_answer(session):
             strip=True
         )
     except Exception as e:
-        print(e)
+        logger.info(e)
         return False
     if status == "Correct!":
         return True
@@ -113,7 +122,7 @@ def sign_in():
 
     # Extract the authenticity token from the HTML response
     authenticity_token = soup.find("input", {"name": "authenticity_token"}).get("value")
-    # # print(authenticity_token)
+    # # logger.info(authenticity_token)
     login_data = {
         "authenticity_token": authenticity_token,
         "user[email]": EMAIL,
@@ -125,12 +134,12 @@ def sign_in():
     response = session.get(QUIZ_URL)
     qu, answers = obtain_question(response)
     prompt = get_prompt(qu, answers)
-    print(prompt)
+    logger.info(prompt)
     selected_answer = determine_answer(qu, answers)
-    print(f"Chosen Answer={selected_answer}")
+    logger.info(f"Chosen Answer={selected_answer}")
     submit_quiz(session, selected_answer, response)
     if check_answer(session):
-        print("Answer Correct!")
+        logger.info("Answer Correct!")
         cmd = f'curl "http://{HOME_IP}:8991/message?token={TOKEN}" -F "title=[SU!] QUIZMASTER" -F "message"="Answer submitted sucessfully & is CORRECT." -F "priority=5"'
         subprocess.run(
             cmd,
@@ -141,7 +150,7 @@ def sign_in():
             check=True,
         )
     else:
-        print("Answer Wrong!")
+        logger.info("Answer Wrong!")
         cmd = f'curl "http://{HOME_IP}:8991/message?token={TOKEN}" -F "title= [FA] QUIZMASTER" -F "message"="Submission is INCORRECT." -F "priority=5"'
         subprocess.run(
             cmd,
