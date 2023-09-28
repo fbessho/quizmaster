@@ -26,7 +26,18 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S %Z",
 )
+
+# Create a StreamHandler to log messages to the terminal
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(
+    logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S %Z"
+    )
+)
+
+# Get the root logger and add the stream handler
 logger = logging.getLogger(__name__)
+logger.addHandler(stream_handler)
 
 
 def submit_quiz(session, selected_answer: str, response: requests.Response):
@@ -93,7 +104,6 @@ def determine_answer(qu, answers):
     logger.info(response)
     answer = response.choices[0].text
     answer = answer.strip("\n").strip(" ")[0]
-    logger.info(answer)
     if answer not in ["A", "B", "C", "D"]:
         raise Exception("Wrong Choice! Investigate ChatGPT response...")
     return answer
@@ -118,7 +128,6 @@ def check_answer(session):
 def sign_in():
     """Using requests to sign in to the website given by url"""
     session = requests.Session()
-    raise Exception("CHEESE")
     response = session.get(SIGN_IN_URL)
     soup = BeautifulSoup(response.text, "html.parser")
 
