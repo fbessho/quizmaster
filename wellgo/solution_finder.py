@@ -125,6 +125,18 @@ def check_answer(session):
     return False
 
 
+def notify(header, message):
+    cmd = f'curl "http://{HOME_IP}:8991/message?token={TOKEN}" -F "title=[{header}] QUIZMASTER" -F "message"="{message}" -F "priority=5"'
+    subprocess.run(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True,
+    )
+
+
 def sign_in():
     """Using requests to sign in to the website given by url"""
     session = requests.Session()
@@ -151,26 +163,10 @@ def sign_in():
     submit_quiz(session, selected_answer, response)
     if check_answer(session):
         logger.info("Answer Correct!")
-        cmd = f'curl "http://{HOME_IP}:8991/message?token={TOKEN}" -F "title=[SU!] QUIZMASTER" -F "message"="Answer submitted sucessfully & is CORRECT." -F "priority=5"'
-        subprocess.run(
-            cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True,
-        )
+        notify("SU", "Answer submitted sucessfully & is CORRECT.")
     else:
         logger.info("Answer Wrong!")
-        cmd = f'curl "http://{HOME_IP}:8991/message?token={TOKEN}" -F "title= [FA] QUIZMASTER" -F "message"="Submission is INCORRECT." -F "priority=5"'
-        subprocess.run(
-            cmd,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True,
-        )
+        notify("**FA**", "Submission is INCORRECT.")
 
 
 if __name__ == "__main__":
@@ -178,3 +174,4 @@ if __name__ == "__main__":
         sign_in()
     except Exception as e:
         logger.exception(str(e))
+        notify("EXC", str(e))
