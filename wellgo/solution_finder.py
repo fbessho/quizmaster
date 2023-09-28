@@ -92,7 +92,7 @@ def determine_answer(qu, answers):
     )
     logger.info(response)
     answer = response.choices[0].text
-    answer = answer.strip("\n")[0]
+    answer = answer.strip("\n").strip(" ")[0]
     logger.info(answer)
     if answer not in ["A", "B", "C", "D"]:
         raise Exception("Wrong Choice! Investigate ChatGPT response...")
@@ -118,6 +118,7 @@ def check_answer(session):
 def sign_in():
     """Using requests to sign in to the website given by url"""
     session = requests.Session()
+    raise Exception("CHEESE")
     response = session.get(SIGN_IN_URL)
     soup = BeautifulSoup(response.text, "html.parser")
 
@@ -164,4 +165,7 @@ def sign_in():
 
 
 if __name__ == "__main__":
-    sign_in()
+    try:
+        sign_in()
+    except Exception as e:
+        logger.exception(str(e))
