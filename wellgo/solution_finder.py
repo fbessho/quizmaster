@@ -1,6 +1,8 @@
+import datetime
 import logging
 import os
 import subprocess
+from logging.handlers import RotatingFileHandler
 
 import openai
 import requests
@@ -20,12 +22,17 @@ TOKEN = os.getenv("TOKEN")
 HOME_IP = os.getenv("HOME_IP")
 
 log_file = os.getenv("LOG_LOCATION")
-logging.basicConfig(
-    filename=log_file,
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
+
+handler = RotatingFileHandler(
+    log_file,
+    maxBytes=1024 * 1024,
+    backupCount=5,
+)
+formatter = logging.Formatter(
+    "%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S %Z",
 )
+handler.setFormatter(formatter)
 
 # Create a StreamHandler to log messages to the terminal
 stream_handler = logging.StreamHandler()
@@ -34,10 +41,16 @@ stream_handler.setFormatter(
         "%(asctime)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S %Z"
     )
 )
-
 # Get the root logger and add the stream handler
 logger = logging.getLogger(__name__)
 logger.addHandler(stream_handler)
+logger.addHandler(handler)
+
+should_roll_over = os.path.isfile(log_file)
+if should_roll_over:  # log already exists, roll over!
+    handler.doRollover()
+
+logger.setLevel(logging.INFO)
 
 
 def submit_quiz(session, selected_answer: str, response: requests.Response):
@@ -68,7 +81,6 @@ def obtain_question(response):
     question = question_element.get_text(strip=True)
     logger.info(question)
     if question == "No quiz today.":
-        logger.info("No quiz today")
         return None, None
     # Find the table with id "quiz_question_table"
     table = soup.find("table", {"id": "quiz_question_table"})
@@ -79,7 +91,6 @@ def obtain_question(response):
     choices = ["A", "B", "C", "D"]
     # Iterate through the rows and logger.info their contents
     for i, row in enumerate(rows):
-        # logger.info(row.prettify())
         div_element = row.find("div")
         if div_element:
             answers.append(choices[i] + ". " + div_element.get_text(strip=True))
@@ -118,7 +129,7 @@ def check_answer(session):
             strip=True
         )
     except Exception as e:
-        logger.info(e)
+        logger.exception(e)
         return False
     if status == "Correct!":
         return True
@@ -137,15 +148,15 @@ def notify(header, message):
     )
 
 
-def sign_in():
+def run():
     """Using requests to sign in to the website given by url"""
+    logger.info(f'Running quiz extraction for date {datetime.date.today()}')
+    # Sign in
     session = requests.Session()
     response = session.get(SIGN_IN_URL)
     soup = BeautifulSoup(response.text, "html.parser")
 
-    # Extract the authenticity token from the HTML response
     authenticity_token = soup.find("input", {"name": "authenticity_token"}).get("value")
-    # # logger.info(authenticity_token)
     login_data = {
         "authenticity_token": authenticity_token,
         "user[email]": EMAIL,
@@ -154,12 +165,22 @@ def sign_in():
     }
 
     response = session.post(SIGN_IN_URL, data=login_data)
+
+    # Get todays question and answer
     response = session.get(QUIZ_URL)
     qu, answers = obtain_question(response)
+    if qu is None and answers is None:
+        logger.info("No quiz today")
+        notify("SU", "No quiz today")
+        return
     prompt = get_prompt(qu, answers)
     logger.info(prompt)
+
+    # Determine the answer
     selected_answer = determine_answer(qu, answers)
     logger.info(f"Chosen Answer={selected_answer}")
+
+    # Submit the answer
     submit_quiz(session, selected_answer, response)
     if check_answer(session):
         logger.info("Answer Correct!")
@@ -171,7 +192,7 @@ def sign_in():
 
 if __name__ == "__main__":
     try:
-        sign_in()
+        run()
     except Exception as e:
         logger.exception(str(e))
         notify("EXC", str(e))
