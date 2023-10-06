@@ -110,7 +110,7 @@ def get_prompt(question, answers):
 def determine_answer(qu, answers):
     """Use ChatGPT to solve qu and return answer from answers"""
     response = openai.Completion.create(
-        model="gpt-3.5-turbo-instruct", prompt=get_prompt(qu, answers), temperature=1.0
+        model="gpt-3.5-turbo-instruct", prompt=get_prompt(qu, answers), temperature=0.2
     )
     logger.info(response)
     answer = response.choices[0].text
