@@ -9,3 +9,4 @@ chromadb
 google-api-python-client
 html2text
 tiktoken
+fake_useragent
