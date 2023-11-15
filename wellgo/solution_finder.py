@@ -109,40 +109,6 @@ def obtain_question(response):
     return question, answers
 
 
-def get_prompt(question, answers, snippets):
-    """Return the prompt for the question and answers"""
-    return f"""
-    Give response as a single letter from options that answers this question. User given Google Search Results to determine the answer.
-    # Question
-    {question}
-    # Options 
-    {answers}
-    # Google Search Results
-    {snippets}
-    """
-
-def get_google_prompt(question):
-    return f"""
-    Give a Japanese search query in Japanese to answer the following question.
-
-    # Question
-    {question}
-    """
-
-def get_search_result(question):
-    params = {
-        'key': os.getenv('GOOGLE_API_KEY'),
-        'cx': os.getenv('GOOGLE_CX'),
-        'q': question,
-    }
-    r = requests.get('https://customsearch.googleapis.com/customsearch/v1', params=params)
-    actual_url = r.url
-    # logger.info(f'URL called: {actual_url}')    
-    # logger.info(r.json())
-    snippets = [x['snippet'] for x in r.json()['items']]
-    return '\n\n'.join(snippets)
-
-
 def check_answer(session):
     """Check if the answer was correct by querying the website"""
     response = session.get(QUIZ_URL)
@@ -160,16 +126,17 @@ def check_answer(session):
 
 
 def notify(header, message):
+    
     logger.info(f"Sending notification {header} {message}")
-    # cmd = f'curl "http://{HOME_IP}:8991/message?token={TOKEN}" -F "title=[{header}] QUIZMASTER" -F "message"="{message}" -F "priority=5"'
-    # subprocess.run(
-    #     cmd,
-    #     shell=True,
-    #     stdout=subprocess.PIPE,
-    #     stderr=subprocess.PIPE,
-    #     text=True,
-    #     check=True,
-    # )
+    cmd = f'curl "http://{HOME_IP}:8991/message?token={TOKEN}" -F "title=[{header}] QUIZMASTER" -F "message"="{message}" -F "priority=5"'
+    subprocess.run(
+        cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        check=True,
+    )
 
 
 def run(strategy: BaseStrategy, dry_run=False):

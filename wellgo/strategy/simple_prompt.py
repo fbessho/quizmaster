@@ -9,7 +9,7 @@ class SimplePromptStrategy(BaseStrategy):
     def get_prompt(self, question, answers):
         """Return the prompt for the question and answers"""
         return f"""
-        {question} Give Response  as a single letter from options that answers this qu.
+        {question} Give Response as a single letter from options that answers this qu.
         # Options 
         {answers}
         """
