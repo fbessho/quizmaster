@@ -25,6 +25,7 @@ POST_ANSWER_URL = os.getenv("POST_ANSWER_URL")
 openai.api_key = os.getenv("OPENAI_API_KEY")
 TOKEN = os.getenv("TOKEN")
 HOME_IP = os.getenv("HOME_IP")
+NOTIFY_FLAG = os.getenv("NOTIFY_FLAG")
 
 log_file = os.getenv("LOG_LOCATION")
 
@@ -126,17 +127,19 @@ def check_answer(session):
 
 
 def notify(header, message):
-    
-    logger.info(f"Sending notification {header} {message}")
-    cmd = f'curl "http://{HOME_IP}:8991/message?token={TOKEN}" -F "title=[{header}] QUIZMASTER" -F "message"="{message}" -F "priority=5"'
-    subprocess.run(
-        cmd,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-        check=True,
-    )
+    if NOTIFY_FLAG:
+        logger.info(f"Sending notification {header} {message}")
+        cmd = f'curl "http://{HOME_IP}:8991/message?token={TOKEN}" -F "title=[{header}] QUIZMASTER" -F "message"="{message}" -F "priority=5"'
+        subprocess.run(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True,
+        )
+    else:
+        logger.info(f"NOT Sending notification {header} {message}")
 
 
 def run(strategy: BaseStrategy, dry_run=False):
