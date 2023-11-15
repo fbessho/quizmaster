@@ -105,7 +105,7 @@ def obtain_question(response):
         logger.info(answers)
     except Exception as e:
         logger.info("Error in obtaining question and answers, getting from cache instead")
-        data = json.load(open(f"wellgo/cache/{datetime.date.today()}.json", 'r', encoding='utf-8'))
+        data = json.load(open(f"{CACHE_LOCATION}/{datetime.date.today()}.json", 'r', encoding='utf-8'))
         question = data['question']
         answers = data['answers']
     return question, answers
