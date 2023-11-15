@@ -28,6 +28,7 @@ HOME_IP = os.getenv("HOME_IP")
 NOTIFY_FLAG = os.getenv("NOTIFY_FLAG")
 
 log_file = os.getenv("LOG_LOCATION")
+CACHE_LOCATION = os.getenv("CACHE_LOCATION")
 
 handler = RotatingFileHandler(
     log_file,
@@ -170,7 +171,7 @@ def run(strategy: BaseStrategy, dry_run=False):
     
     # Save the question and answers to a JSON file
     data = {"date": f"{datetime.date.today()}", "question": qu, "answers": answers}
-    json.dump(data, open(f"wellgo/cache/{datetime.date.today()}.json", 'w', encoding='utf-8'), ensure_ascii=False)
+    json.dump(data, open(f"{CACHE_LOCATION}/{datetime.date.today()}.json", 'w', encoding='utf-8'), ensure_ascii=False)
 
     # Determine the answer
     selected_answer = strategy.determine_answer(qu, answers)
