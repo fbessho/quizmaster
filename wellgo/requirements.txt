@@ -3,3 +3,9 @@ beautifulsoup4
 pylint
 requests
 openai
+python-dotenv
+langchain
+chromadb
+google-api-python-client
+html2text
+tiktoken
