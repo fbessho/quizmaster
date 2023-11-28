@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from strategy.retrieval_qa_with_source import WebSearchStrategy
 from strategy import BaseStrategy
 from strategy.simple_prompt import SimplePromptStrategy
+from strategy.chat_completion import ChatCompletionStrategy
 
 load_dotenv()
 
@@ -201,8 +202,9 @@ def run(strategy: BaseStrategy, dry_run=False):
 
 if __name__ == "__main__":
     try:
-        strategy = WebSearchStrategy()
+        # strategy = WebSearchStrategy()
         # strategy = SimplePromptStrategy()
+        strategy = ChatCompletionStrategy(model='gpt-4')
         run(
             strategy=strategy,
             dry_run=False
