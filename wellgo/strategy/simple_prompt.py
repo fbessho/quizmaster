@@ -6,6 +6,9 @@ logger = logging.getLogger(__name__)
 
 
 class SimplePromptStrategy(BaseStrategy):
+    def __init__(self):
+        self.client = openai.OpenAI()
+
     def get_prompt(self, question, answers):
         """Return the prompt for the question and answers"""
         return f"""
@@ -16,7 +19,7 @@ class SimplePromptStrategy(BaseStrategy):
 
     def determine_answer(self, qu, choices):
         """Use ChatGPT to solve qu and return answer from answers"""
-        response = openai.Completion.create(
+        response = self.client.completions.create(
             model="gpt-3.5-turbo-instruct", prompt=self.get_prompt(qu, choices), temperature=1.0
         )
         logger.info(response)
