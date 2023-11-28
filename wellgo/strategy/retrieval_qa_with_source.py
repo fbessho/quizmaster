@@ -19,7 +19,7 @@ class WebSearchStrategy(BaseStrategy):
         self.name = "web_search"
         self.model = "gpt-3.5-turbo-16k"
     
-    def determine_answer(self, question: str, answers: List[str]) -> str:
+    def determine_answer(self, question: str, choices: List[str]) -> str:
         # vec store
         vectorstore = Chroma(embedding_function=OpenAIEmbeddings(), persist_directory="./chroma_db_oai")
 
@@ -36,12 +36,12 @@ class WebSearchStrategy(BaseStrategy):
             llm=llm, 
             search=search)
 
-        answers_str = "\n".join(answers)
+        choices = "\n".join(choices)
         
         user_input = f"""
         {question}. Answer in a single letter from the options below.
 
-        {answers_str}
+        {choices}
         """
         logger.info(f"User Input: {user_input}")
         qa_chain = RetrievalQAWithSourcesChain.from_chain_type(

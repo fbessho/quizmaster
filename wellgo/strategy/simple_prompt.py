@@ -14,10 +14,10 @@ class SimplePromptStrategy(BaseStrategy):
         {answers}
         """
 
-    def determine_answer(self, qu, answers):
+    def determine_answer(self, qu, choices):
         """Use ChatGPT to solve qu and return answer from answers"""
         response = openai.Completion.create(
-            model="gpt-3.5-turbo-instruct", prompt=self.get_prompt(qu, answers), temperature=1.0
+            model="gpt-3.5-turbo-instruct", prompt=self.get_prompt(qu, choices), temperature=1.0
         )
         logger.info(response)
         answer = response.choices[0].text
