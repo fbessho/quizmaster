@@ -115,15 +115,17 @@ def check_answer(session):
     """Check if the answer was correct by querying the website"""
     response = session.get(QUIZ_URL)
     soup = BeautifulSoup(response.text, "html.parser")
+    correct_answer_text = soup.find("div", class_="div-td-answer").get_text(strip=True)
+    cottect_answer = correct_answer_text[3]
     try:
-        status = soup.find("h1", {"style": "color: #70c78b"}, string=True).get_text(
+        status = soup.find("h1", {"class": "font-lighter-main-color"}, string=True).get_text(
             strip=True
         )
     except Exception as e:
         logger.exception(e)
-        return False
-    if status == "Correct!":
-        return True
+        return False, {"answer": cottect_answer, "answer_text": correct_answer_text}
+    if status in ("Correct!", "正解です!"):
+        return True, {"answer": cottect_answer, "answer_text": correct_answer_text}
     return False
 
 
@@ -169,10 +171,6 @@ def run(strategy: BaseStrategy, dry_run=False):
         notify("SU", "No quiz today")
         return
     
-    # Save the question and answers to a JSON file
-    data = {"date": f"{datetime.date.today()}", "question": qu, "answers": answers}
-    json.dump(data, open(f"{CACHE_LOCATION}/{datetime.date.today()}.json", 'w', encoding='utf-8'), ensure_ascii=False)
-
     # Determine the answer
     selected_answer = strategy.determine_answer(qu, answers)
     logger.info(f"Chosen Answer={selected_answer}")
@@ -182,12 +180,23 @@ def run(strategy: BaseStrategy, dry_run=False):
         logger.info("Dry Run, not submitting answer")
     else:
         submit_quiz(session, selected_answer, response)
-        if check_answer(session):
+        result, answer_dict = check_answer(session)
+        if result:
             logger.info("Answer Correct!")
             notify("SU", "Answer submitted sucessfully & is CORRECT.")
         else:
             logger.info("Answer Wrong!")
             notify("**FA**", "Submission is INCORRECT.")
+
+    # Save the question and answer to a JSON file
+    data = {
+        "date": f"{datetime.date.today()}", 
+        "question": qu,
+        "options": answers,
+        "answer": answer_dict["answer"],
+        "answer_text": answer_dict["answer_text"]         
+    }
+    json.dump(data, open(f"{CACHE_LOCATION}/{datetime.date.today()}.json", 'w', encoding='utf-8'), ensure_ascii=False)
 
 
 if __name__ == "__main__":
