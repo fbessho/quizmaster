@@ -108,7 +108,7 @@ def obtain_question(response):
         logger.info("Error in obtaining question and answers, getting from cache instead")
         data = json.load(open(f"{CACHE_LOCATION}/{datetime.date.today()}.json", 'r', encoding='utf-8'))
         question = data['question']
-        answers = data['answers']
+        answers = data['choices']
     return question, answers
 
 
@@ -166,14 +166,14 @@ def run(strategy: BaseStrategy, dry_run=False):
 
     # Get todays question and answer
     response = session.get(QUIZ_URL)
-    qu, answers = obtain_question(response)
-    if qu is None and answers is None:
+    qu, choices = obtain_question(response)
+    if qu is None and choices is None:
         logger.info("No quiz today")
         notify("SU", "No quiz today")
         return
     
     # Determine the answer
-    selected_answer = strategy.determine_answer(qu, answers)
+    selected_answer = strategy.determine_answer(qu, choices)
     logger.info(f"Chosen Answer={selected_answer}")
 
     # Submit the answer
@@ -193,7 +193,7 @@ def run(strategy: BaseStrategy, dry_run=False):
     data = {
         "date": f"{datetime.date.today()}", 
         "question": qu,
-        "options": answers,
+        "choices": choices,
         "answer": answer_dict["answer"],
         "answer_text": answer_dict["answer_text"]         
     }
