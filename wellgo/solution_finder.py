@@ -24,12 +24,17 @@ SIGN_IN_URL = os.getenv("SIGN_IN_URL")
 QUIZ_URL = os.getenv("QUIZ_URL")
 POST_ANSWER_URL = os.getenv("POST_ANSWER_URL")
 openai.api_key = os.getenv("OPENAI_API_KEY")
-TOKEN = os.getenv("TOKEN")
+NOTIFY_TOKEN = os.getenv("NOTIFY_TOKEN")
 HOME_IP = os.getenv("HOME_IP")
 NOTIFY_FLAG = os.getenv("NOTIFY_FLAG")
 
 log_file = os.getenv("LOG_LOCATION")
 CACHE_LOCATION = os.getenv("CACHE_LOCATION")
+
+# Check if the directory exists, and if not, create it
+log_dir = os.path.dirname(log_file)
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
 
 handler = RotatingFileHandler(
     log_file,
@@ -131,9 +136,9 @@ def check_answer(session):
 
 
 def notify(header, message):
-    if NOTIFY_FLAG:
+    if NOTIFY_FLAG.upper()[0] == 'T':
         logger.info(f"Sending notification {header} {message}")
-        cmd = f'curl "http://{HOME_IP}:8991/message?token={TOKEN}" -F "title=[{header}] QUIZMASTER" -F "message"="{message}" -F "priority=5"'
+        cmd = f'curl "http://{HOME_IP}:8991/message?token={NOTIFY_TOKEN}" -F "title=[{header}] QUIZMASTER" -F "message"="{message}" -F "priority=5"'
         subprocess.run(
             cmd,
             shell=True,
@@ -182,23 +187,23 @@ def run(strategy: BaseStrategy, dry_run=False):
     else:
         submit_quiz(session, selected_answer, response)
         result, answer_dict = check_answer(session)
+
+        # Save the question and answer to a JSON file
+        data = {
+            "date": f"{datetime.date.today()}", 
+            "question": qu,
+            "choices": choices,
+            "answer": answer_dict["answer"],
+            "answer_text": answer_dict["answer_text"]         
+        }
+        json.dump(data, open(f"{CACHE_LOCATION}/{datetime.date.today()}.json", 'w', encoding='utf-8'), ensure_ascii=False)
+
         if result:
             logger.info("Answer Correct!")
             notify("SU", "Answer submitted sucessfully & is CORRECT.")
         else:
             logger.info("Answer Wrong!")
             notify("**FA**", "Submission is INCORRECT.")
-
-    # Save the question and answer to a JSON file
-    data = {
-        "date": f"{datetime.date.today()}", 
-        "question": qu,
-        "choices": choices,
-        "answer": answer_dict["answer"],
-        "answer_text": answer_dict["answer_text"]         
-    }
-    json.dump(data, open(f"{CACHE_LOCATION}/{datetime.date.today()}.json", 'w', encoding='utf-8'), ensure_ascii=False)
-
 
 if __name__ == "__main__":
     try:

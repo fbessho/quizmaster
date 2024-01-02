@@ -1,5 +1,7 @@
 .env
 *.pyc
 venv/
-cache/
 __pycache__/
+
+cache/
+logs/
